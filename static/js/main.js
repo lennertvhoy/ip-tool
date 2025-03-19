@@ -22,7 +22,241 @@ let currentState = {
     timerInterval: null
 };
 
-// Question generators
+// Solution step generators
+const solutionSteps = {
+    [MODES.BINARY]: {
+        decimalToBinary: (decimal) => {
+            const steps = [];
+            let num = decimal;
+            let divisions = [];
+            
+            while (num > 0) {
+                divisions.push({
+                    number: num,
+                    remainder: num % 2
+                });
+                num = Math.floor(num / 2);
+            }
+
+            steps.push({
+                title: "1. Start with the decimal number",
+                content: `Number to convert: ${decimal}`
+            });
+            
+            steps.push({
+                title: "2. Divide by 2 repeatedly and track remainders",
+                content: divisions.map(d => `${d.number} ÷ 2 = ${Math.floor(d.number/2)} remainder ${d.remainder}`).join('\n')
+            });
+            
+            const binary = divisions.map(d => d.remainder).reverse().join('').padStart(8, '0');
+            steps.push({
+                title: "3. Read remainders from bottom to top",
+                content: `Reading the remainders from bottom to top gives us: ${binary}`
+            });
+            
+            return steps;
+        },
+        binaryToDecimal: (binary) => {
+            const steps = [];
+            steps.push({
+                title: "1. Write out the binary number with position values",
+                content: `${binary}\nPosition values: ${binary.split('').map((_, i) => Math.pow(2, binary.length - 1 - i)).join(' ')}`
+            });
+            
+            const calculations = binary.split('').map((bit, i) => {
+                const posValue = Math.pow(2, binary.length - 1 - i);
+                return bit === '1' ? `1 × ${posValue} = ${posValue}` : `0 × ${posValue} = 0`;
+            });
+            
+            steps.push({
+                title: "2. Multiply each digit by its position value",
+                content: calculations.join('\n')
+            });
+            
+            const sum = binary.split('').reduce((acc, bit, i) => {
+                return acc + (bit === '1' ? Math.pow(2, binary.length - 1 - i) : 0);
+            }, 0);
+            
+            steps.push({
+                title: "3. Add all the results",
+                content: `Sum: ${calculations.filter(calc => !calc.endsWith('= 0')).join(' + ')}\nFinal result: ${sum}`
+            });
+            
+            return steps;
+        }
+    },
+    [MODES.HEXADECIMAL]: {
+        decimalToHex: (decimal) => {
+            const steps = [];
+            let num = decimal;
+            let divisions = [];
+            
+            while (num > 0) {
+                const remainder = num % 16;
+                divisions.push({
+                    number: num,
+                    remainder: remainder < 10 ? remainder : String.fromCharCode(55 + remainder)
+                });
+                num = Math.floor(num / 16);
+            }
+
+            steps.push({
+                title: "1. Start with the decimal number",
+                content: `Number to convert: ${decimal}`
+            });
+            
+            steps.push({
+                title: "2. Divide by 16 repeatedly and track remainders",
+                content: divisions.map(d => 
+                    `${d.number} ÷ 16 = ${Math.floor(d.number/16)} remainder ${d.remainder}`
+                ).join('\n')
+            });
+            
+            const hex = divisions.map(d => d.remainder).reverse().join('');
+            steps.push({
+                title: "3. Convert remainders to hex digits (10=A, 11=B, etc.)",
+                content: "Remainders 10-15 are represented as A-F:\n" +
+                        "10=A, 11=B, 12=C, 13=D, 14=E, 15=F"
+            });
+            
+            steps.push({
+                title: "4. Read remainders from bottom to top",
+                content: `Final hexadecimal number: ${hex}`
+            });
+            
+            return steps;
+        },
+        hexToDecimal: (hex) => {
+            const steps = [];
+            steps.push({
+                title: "1. Write out the hex number with position values",
+                content: `${hex}\nPosition values: ${hex.split('').map((_, i) => Math.pow(16, hex.length - 1 - i)).join(' ')}`
+            });
+            
+            const calculations = hex.split('').map((digit, i) => {
+                const posValue = Math.pow(16, hex.length - 1 - i);
+                const decimalDigit = parseInt(digit, 16);
+                return `${digit} × ${posValue} = ${decimalDigit * posValue}`;
+            });
+            
+            steps.push({
+                title: "2. Convert each hex digit to decimal and multiply by position value",
+                content: "Hex to decimal conversion:\n" +
+                        "A=10, B=11, C=12, D=13, E=14, F=15\n\n" +
+                        calculations.join('\n')
+            });
+            
+            const sum = parseInt(hex, 16);
+            steps.push({
+                title: "3. Add all the results",
+                content: `Sum: ${calculations.join(' + ')}\nFinal result: ${sum}`
+            });
+            
+            return steps;
+        }
+    },
+    [MODES.SUBNETTING]: {
+        subnetCalculation: (network, cidr) => {
+            const steps = [];
+            
+            // Split the network address
+            const octets = network.split('.');
+            const binaryOctets = octets.map(octet => 
+                parseInt(octet).toString(2).padStart(8, '0')
+            );
+            
+            steps.push({
+                title: "1. Convert IP address to binary",
+                content: `IP: ${network}\nBinary: ${binaryOctets.join('.')}`
+            });
+            
+            // Create subnet mask
+            const maskBits = '1'.repeat(cidr) + '0'.repeat(32 - cidr);
+            const maskOctets = [];
+            for (let i = 0; i < 32; i += 8) {
+                maskOctets.push(maskBits.slice(i, i + 8));
+            }
+            
+            steps.push({
+                title: "2. Create subnet mask from CIDR",
+                content: `/${cidr} means ${cidr} 1's followed by ${32-cidr} 0's:\n` +
+                        `Binary mask: ${maskOctets.join('.')}\n` +
+                        `Decimal mask: ${maskOctets.map(o => parseInt(o, 2)).join('.')}`
+            });
+            
+            // Calculate network and broadcast addresses
+            const networkBinary = binaryOctets.join('').slice(0, cidr) + '0'.repeat(32 - cidr);
+            const broadcastBinary = binaryOctets.join('').slice(0, cidr) + '1'.repeat(32 - cidr);
+            
+            const networkOctets = [];
+            const broadcastOctets = [];
+            for (let i = 0; i < 32; i += 8) {
+                networkOctets.push(parseInt(networkBinary.slice(i, i + 8), 2));
+                broadcastOctets.push(parseInt(broadcastBinary.slice(i, i + 8), 2));
+            }
+            
+            steps.push({
+                title: "3. Calculate network and broadcast addresses",
+                content: `Network address (all host bits 0):\n${networkOctets.join('.')}\n\n` +
+                        `Broadcast address (all host bits 1):\n${broadcastOctets.join('.')}`
+            });
+            
+            const hosts = Math.pow(2, 32 - cidr) - 2;
+            steps.push({
+                title: "4. Calculate usable host range",
+                content: `Number of host bits: ${32 - cidr}\n` +
+                        `Total addresses: 2^${32 - cidr} = ${Math.pow(2, 32 - cidr)}\n` +
+                        `Usable hosts: ${Math.pow(2, 32 - cidr)} - 2 = ${hosts}\n` +
+                        `(Subtract 2 for network and broadcast addresses)`
+            });
+            
+            return steps;
+        }
+    },
+    [MODES.VLSM]: {
+        vlsmCalculation: (network, requiredHosts) => {
+            const steps = [];
+            
+            steps.push({
+                title: "1. Determine required host bits",
+                content: `Hosts needed: ${requiredHosts}\n` +
+                        `Formula: 2^n - 2 ≥ ${requiredHosts}\n` +
+                        `where n is the number of host bits\n\n` +
+                        `Try different values of n:\n` +
+                        Array.from({length: 8}, (_, i) => i + 1)
+                            .map(n => `2^${n} - 2 = ${Math.pow(2, n) - 2} hosts`)
+                            .join('\n')
+            });
+            
+            const hostBits = Math.ceil(Math.log2(requiredHosts + 2));
+            const subnetBits = 32 - hostBits;
+            
+            steps.push({
+                title: "2. Calculate CIDR notation",
+                content: `Required host bits: ${hostBits}\n` +
+                        `CIDR notation: /${subnetBits}\n` +
+                        `(32 total bits - ${hostBits} host bits = ${subnetBits} network bits)`
+            });
+            
+            // Convert to binary and calculate subnet mask
+            const maskBits = '1'.repeat(subnetBits) + '0'.repeat(hostBits);
+            const maskOctets = [];
+            for (let i = 0; i < 32; i += 8) {
+                maskOctets.push(parseInt(maskBits.slice(i, i + 8), 2));
+            }
+            
+            steps.push({
+                title: "3. Calculate subnet mask",
+                content: `Binary mask: ${maskBits.match(/.{8}/g).join('.')}\n` +
+                        `Decimal mask: ${maskOctets.join('.')}`
+            });
+            
+            return steps;
+        }
+    }
+};
+
+// Question generators with step-by-step solutions
 const questionGenerators = {
     [MODES.BINARY]: {
         [DIFFICULTIES.EASY]: () => {
@@ -30,24 +264,43 @@ const questionGenerators = {
             return {
                 question: `Convert ${num} to binary`,
                 answer: num.toString(2).padStart(8, '0'),
-                explanation: `${num} in binary is ${num.toString(2).padStart(8, '0')}`
+                explanation: `${num} in binary is ${num.toString(2).padStart(8, '0')}`,
+                steps: solutionSteps[MODES.BINARY].decimalToBinary(num)
             };
         },
         [DIFFICULTIES.MEDIUM]: () => {
             const num1 = Math.floor(Math.random() * 256);
             const num2 = Math.floor(Math.random() * 256);
+            const bin1 = num1.toString(2).padStart(8, '0');
+            const bin2 = num2.toString(2).padStart(8, '0');
             return {
-                question: `Add these binary numbers:\n${num1.toString(2).padStart(8, '0')}\n${num2.toString(2).padStart(8, '0')}`,
+                question: `Add these binary numbers:\n${bin1}\n${bin2}`,
                 answer: (num1 + num2).toString(2).padStart(9, '0'),
-                explanation: `${num1} (${num1.toString(2)}) + ${num2} (${num2.toString(2)}) = ${num1 + num2} (${(num1 + num2).toString(2)})`
+                explanation: `${num1} (${bin1}) + ${num2} (${bin2}) = ${num1 + num2} (${(num1 + num2).toString(2)})`,
+                steps: [
+                    {
+                        title: "1. Convert both numbers to decimal",
+                        content: `First number: ${bin1} = ${num1}\nSecond number: ${bin2} = ${num2}`
+                    },
+                    {
+                        title: "2. Add the decimal numbers",
+                        content: `${num1} + ${num2} = ${num1 + num2}`
+                    },
+                    {
+                        title: "3. Convert the result back to binary",
+                        content: `${num1 + num2} in binary is ${(num1 + num2).toString(2).padStart(9, '0')}`
+                    }
+                ]
             };
         },
         [DIFFICULTIES.HARD]: () => {
             const num = Math.floor(Math.random() * 65536);
+            const binary = num.toString(2);
             return {
-                question: `Convert ${num.toString(2)} to decimal`,
+                question: `Convert ${binary} to decimal`,
                 answer: num.toString(),
-                explanation: `${num.toString(2)} in decimal is ${num}`
+                explanation: `${binary} in decimal is ${num}`,
+                steps: solutionSteps[MODES.BINARY].binaryToDecimal(binary)
             };
         }
     },
@@ -57,7 +310,8 @@ const questionGenerators = {
             return {
                 question: `Convert ${num} to hexadecimal`,
                 answer: num.toString(16).toUpperCase(),
-                explanation: `${num} in hexadecimal is ${num.toString(16).toUpperCase()}`
+                explanation: `${num} in hexadecimal is ${num.toString(16).toUpperCase()}`,
+                steps: solutionSteps[MODES.HEXADECIMAL].decimalToHex(num)
             };
         },
         [DIFFICULTIES.MEDIUM]: () => {
@@ -65,7 +319,8 @@ const questionGenerators = {
             return {
                 question: `Convert ${num.toString(16).toUpperCase()} from hexadecimal to decimal`,
                 answer: num.toString(),
-                explanation: `${num.toString(16).toUpperCase()} in decimal is ${num}`
+                explanation: `${num.toString(16).toUpperCase()} in decimal is ${num}`,
+                steps: solutionSteps[MODES.HEXADECIMAL].hexToDecimal(num.toString(16).toUpperCase())
             };
         },
         [DIFFICULTIES.HARD]: () => {
@@ -74,7 +329,21 @@ const questionGenerators = {
             return {
                 question: `Add these hexadecimal numbers:\n${num1.toString(16).toUpperCase()}\n${num2.toString(16).toUpperCase()}`,
                 answer: (num1 + num2).toString(16).toUpperCase(),
-                explanation: `${num1.toString(16).toUpperCase()} (${num1}) + ${num2.toString(16).toUpperCase()} (${num2}) = ${(num1 + num2).toString(16).toUpperCase()} (${num1 + num2})`
+                explanation: `${num1.toString(16).toUpperCase()} (${num1}) + ${num2.toString(16).toUpperCase()} (${num2}) = ${(num1 + num2).toString(16).toUpperCase()} (${num1 + num2})`,
+                steps: [
+                    {
+                        title: "1. Convert both numbers to decimal",
+                        content: `First number: ${num1.toString(16).toUpperCase()} = ${num1}\nSecond number: ${num2.toString(16).toUpperCase()} = ${num2}`
+                    },
+                    {
+                        title: "2. Add the decimal numbers",
+                        content: `${num1} + ${num2} = ${num1 + num2}`
+                    },
+                    {
+                        title: "3. Convert the result back to hexadecimal",
+                        content: `${num1 + num2} in hexadecimal is ${(num1 + num2).toString(16).toUpperCase()}`
+                    }
+                ]
             };
         }
     },
@@ -86,7 +355,8 @@ const questionGenerators = {
             return {
                 question: `What is the default subnet mask for a Class ${classes[randomClass]} network?`,
                 answer: defaultMasks[randomClass],
-                explanation: `Class ${classes[randomClass]} networks have a default subnet mask of ${defaultMasks[randomClass]}`
+                explanation: `Class ${classes[randomClass]} networks have a default subnet mask of ${defaultMasks[randomClass]}`,
+                steps: solutionSteps[MODES.SUBNETTING].subnetCalculation(defaultMasks[randomClass], 8)
             };
         },
         [DIFFICULTIES.MEDIUM]: () => {
@@ -95,7 +365,8 @@ const questionGenerators = {
             return {
                 question: `Convert this CIDR notation to a subnet mask: /${cidr}`,
                 answer: mask,
-                explanation: `/${cidr} is equivalent to ${mask}`
+                explanation: `/${cidr} is equivalent to ${mask}`,
+                steps: solutionSteps[MODES.SUBNETTING].subnetCalculation(mask, cidr)
             };
         },
         [DIFFICULTIES.HARD]: () => {
@@ -104,7 +375,8 @@ const questionGenerators = {
             return {
                 question: `How many usable host addresses are available in ${network}/${cidr}?`,
                 answer: Math.pow(2, 32-cidr) - 2,
-                explanation: `In a /${cidr} network, there are ${Math.pow(2, 32-cidr)} total addresses, minus 2 for network and broadcast addresses`
+                explanation: `In a /${cidr} network, there are ${Math.pow(2, 32-cidr)} total addresses, minus 2 for network and broadcast addresses`,
+                steps: solutionSteps[MODES.SUBNETTING].subnetCalculation(network, cidr)
             };
         }
     },
@@ -115,7 +387,8 @@ const questionGenerators = {
             return {
                 question: `How many network bits do you need for ${hosts} hosts?`,
                 answer: requiredBits.toString(),
-                explanation: `For ${hosts} hosts, you need ${requiredBits} bits (${Math.pow(2, requiredBits)} addresses, including network and broadcast)`
+                explanation: `For ${hosts} hosts, you need ${requiredBits} bits (${Math.pow(2, requiredBits)} addresses, including network and broadcast)`,
+                steps: solutionSteps[MODES.VLSM].vlsmCalculation(hosts, requiredBits)
             };
         },
         [DIFFICULTIES.MEDIUM]: () => {
@@ -129,14 +402,29 @@ const questionGenerators = {
             return {
                 question: `Given network ${network}, what is the first subnet mask you would use for a network requiring ${subnets[0].hosts} hosts?`,
                 answer: '255.255.255.192',
-                explanation: `For ${subnets[0].hosts} hosts, you need 6 bits (64 addresses), resulting in a /26 or 255.255.255.192`
+                explanation: `For ${subnets[0].hosts} hosts, you need 6 bits (64 addresses), resulting in a /26 or 255.255.255.192`,
+                steps: solutionSteps[MODES.VLSM].vlsmCalculation(subnets[0].hosts, 6)
             };
         },
         [DIFFICULTIES.HARD]: () => {
             return {
                 question: 'Order these networks from largest to smallest:\n1) /27\n2) /25\n3) /26\n4) /24',
                 answer: '4,2,3,1',
-                explanation: '/24 (256 hosts) > /25 (128 hosts) > /26 (64 hosts) > /27 (32 hosts)'
+                explanation: '/24 (256 hosts) > /25 (128 hosts) > /26 (64 hosts) > /27 (32 hosts)',
+                steps: [
+                    {
+                        title: "1. Convert each network to decimal",
+                        content: "1) /27 = 27 network bits\n2) /25 = 25 network bits\n3) /26 = 26 network bits\n4) /24 = 24 network bits"
+                    },
+                    {
+                        title: "2. Compare the network bits",
+                        content: "24 < 25 < 26 < 27"
+                    },
+                    {
+                        title: "3. Order the networks",
+                        content: "4) /24\n2) /25\n3) /26\n1) /27"
+                    }
+                ]
             };
         }
     }
@@ -233,6 +521,32 @@ function startPractice(topic, difficulty) {
     generateQuestion();
 }
 
+function showSolutionSteps() {
+    const steps = currentState.currentQuestion.steps;
+    if (!steps) return;
+
+    const stepsContainer = document.createElement('div');
+    stepsContainer.className = 'solution-steps';
+    
+    steps.forEach(step => {
+        const stepElement = document.createElement('div');
+        stepElement.className = 'solution-step';
+        stepElement.innerHTML = `
+            <h4>${step.title}</h4>
+            <pre>${step.content}</pre>
+        `;
+        stepsContainer.appendChild(stepElement);
+    });
+
+    const questionContainer = document.getElementById('question-container');
+    // Remove any existing solution steps
+    const existingSteps = questionContainer.querySelector('.solution-steps');
+    if (existingSteps) {
+        existingSteps.remove();
+    }
+    questionContainer.appendChild(stepsContainer);
+}
+
 function generateQuestion() {
     currentState.questionCount++;
     const generator = questionGenerators[currentState.mode][currentState.difficulty];
@@ -242,7 +556,11 @@ function generateQuestion() {
     questionContainer.innerHTML = `<div class="question">
         <h3>Question ${currentState.questionCount}</h3>
         <pre>${currentState.currentQuestion.question}</pre>
+        <button id="show-solution" class="show-solution-button">Show Solution Steps</button>
     </div>`;
+
+    // Add event listener for the show solution button
+    document.getElementById('show-solution').addEventListener('click', showSolutionSteps);
 
     // Enable answer input and submit button
     const answerInput = document.getElementById('answer-input');
