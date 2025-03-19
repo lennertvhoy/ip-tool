@@ -2,35 +2,36 @@
 
 An interactive educational platform for practicing binary, hexadecimal, subnetting, and VLSM concepts.
 
-## Deploying to Azure from WSL
+## Local Development Setup
 
-### Prerequisites
-- Azure CLI installed on WSL
-- Git installed on WSL
-- SSH key pair generated on WSL
-
-### 1. Install Azure CLI on WSL (if not installed)
 ```bash
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+flask run
 ```
 
-### 2. Login to Azure
+## Azure Deployment Guide
+
+### 1. Prerequisites
 ```bash
+# Install Azure CLI (if not installed)
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
 # Login to Azure
 az login
-
-# List your subscriptions
-az account list --output table
-
-# Set your subscription (if needed)
-az account set --subscription <your-subscription-id>
 ```
 
-### 3. Create Resource Group and VM
+### 2. Create Azure Resources
 ```bash
 # Set variables
 RESOURCE_GROUP="netmaster-rg"
-LOCATION="eastus"  # or your preferred region
+LOCATION="westeurope"
 VM_NAME="netmaster-vm"
 ADMIN_USERNAME="azureuser"
 
@@ -52,33 +53,31 @@ az vm open-port \
   --resource-group $RESOURCE_GROUP \
   --name $VM_NAME \
   --port 80,443
-```
 
-### 4. Get VM's Public IP
-```bash
+# Get VM's public IP
 VM_IP=$(az vm show \
   --resource-group $RESOURCE_GROUP \
   --name $VM_NAME \
   -d \
   --query publicIps \
   -o tsv)
-echo $VM_IP  # Save this IP address
+echo $VM_IP
 ```
 
-### 5. Deploy Application Files
+### 3. Deploy Application
 ```bash
-# Create deployment directory
+# Create deployment directory and copy files
 mkdir -p ~/netmaster-deploy
 cd ~/netmaster-deploy
-
-# Copy application files
 cp -r /path/to/your/netmaster/* .
 
 # Transfer files to VM
 scp -r * $ADMIN_USERNAME@$VM_IP:~/netmaster/
 ```
 
-### 6. SSH into VM and Set Up Application
+### 4. Server Setup
+SSH into your VM and run these commands:
+
 ```bash
 # Connect to VM
 ssh $ADMIN_USERNAME@$VM_IP
@@ -94,129 +93,142 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install gunicorn
 
-# Create Gunicorn service
-sudo tee /etc/systemd/system/netmaster.service << EOF
+# Set correct permissions for home directory
+sudo chmod 755 /home/azureuser
+
+# Create Gunicorn service file
+sudo tee /etc/systemd/system/netmaster.service << 'EOF'
 [Unit]
 Description=NetMaster Gunicorn Service
 After=network.target
 
 [Service]
-User=$ADMIN_USERNAME
+User=azureuser
 Group=www-data
-WorkingDirectory=/home/$ADMIN_USERNAME/netmaster
-Environment="PATH=/home/$ADMIN_USERNAME/netmaster/venv/bin"
-ExecStart=/home/$ADMIN_USERNAME/netmaster/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:app
+WorkingDirectory=/home/azureuser/netmaster
+Environment="PATH=/home/azureuser/netmaster/venv/bin"
+ExecStart=/home/azureuser/netmaster/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:app
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 # Create Nginx configuration
-sudo tee /etc/nginx/sites-available/netmaster << EOF
+sudo tee /etc/nginx/sites-available/netmaster << 'EOF'
 server {
-    listen 80;
-    server_name $VM_IP;
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        alias /home/azureuser/netmaster/static/;
+        expires max;
+        add_header Cache-Control "public";
     }
 }
 EOF
 
-# Enable site and configure Nginx
+# Set up Nginx
 sudo ln -s /etc/nginx/sites-available/netmaster /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default  # Remove default site
+sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t
-sudo systemctl restart nginx
 
-# Start application
+# Set correct permissions
+sudo chown -R azureuser:www-data /home/azureuser/netmaster
+sudo chmod -R 755 /home/azureuser/netmaster
+sudo chmod 755 /home/azureuser/netmaster/static
+sudo chmod -R 644 /home/azureuser/netmaster/static/*
+sudo find /home/azureuser/netmaster/static -type d -exec chmod 755 {} \;
+
+# Start and enable services
+sudo systemctl daemon-reload
 sudo systemctl start netmaster
 sudo systemctl enable netmaster
+sudo systemctl restart nginx
+
+# Configure firewall
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow OpenSSH
+sudo ufw --force enable
 ```
 
-### 7. Verify Deployment
-```bash
-# Check service status
-sudo systemctl status netmaster
-sudo systemctl status nginx
-
-# Test the application
-curl http://$VM_IP
-```
-
+### 5. Verify Deployment
 Your application should now be accessible at `http://<your-vm-ip>`.
 
 ## Troubleshooting
 
-### Check Logs
+### Check Service Status
 ```bash
-# Nginx logs
+# Check Gunicorn service status
+sudo systemctl status netmaster
+
+# Check Nginx status
+sudo systemctl status nginx
+
+# View Nginx logs
 sudo tail -f /var/log/nginx/error.log
 sudo tail -f /var/log/nginx/access.log
 
-# Application logs
+# View application logs
 sudo journalctl -u netmaster -f
 ```
 
 ### Common Issues
 
-1. **Application not starting:**
+1. **Static files not loading:**
 ```bash
-# Check Gunicorn
-sudo systemctl status netmaster
-
-# Check permissions
-sudo chown -R $ADMIN_USERNAME:www-data /home/$ADMIN_USERNAME/netmaster
-sudo chmod -R 755 /home/$ADMIN_USERNAME/netmaster
-```
-
-2. **Nginx not serving application:**
-```bash
-# Verify Nginx config
-sudo nginx -t
-
-# Check if Gunicorn is listening
-sudo netstat -tulpn | grep 8000
-```
-
-3. **Cannot connect to server:**
-```bash
-# Check firewall
-sudo ufw status
-
-# Allow HTTP traffic if needed
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-```
-
-## Maintenance
-
-### Updating the Application
-```bash
-# SSH into VM
-ssh $ADMIN_USERNAME@$VM_IP
-
-# Update application files
-cd ~/netmaster
-# Update your files here
+# Fix permissions for static files
+sudo chmod 755 /home/azureuser
+sudo chmod 755 /home/azureuser/netmaster
+sudo chmod 755 /home/azureuser/netmaster/static
+sudo chmod -R 644 /home/azureuser/netmaster/static/*
+sudo find /home/azureuser/netmaster/static -type d -exec chmod 755 {} \;
+sudo chown -R azureuser:www-data /home/azureuser/netmaster/static
 
 # Restart services
 sudo systemctl restart netmaster
 sudo systemctl restart nginx
 ```
 
-### Monitoring
+2. **Connection refused:**
 ```bash
-# Check CPU/Memory usage
-htop
+# Check if ports are open
+sudo netstat -tulpn | grep -E ':80|:8000'
 
-# Check disk space
-df -h
+# Verify NSG rule
+az network nsg rule list \
+  --resource-group netmaster-rg \
+  --nsg-name netmaster-vmNSG \
+  --query "[].{Name:name, Priority:priority, Port:destinationPortRange, Access:access}" \
+  -o table
+```
 
-# Monitor network connections
-sudo netstat -tulpn
+## Updating the Application
+
+```bash
+# SSH into VM
+ssh azureuser@<your-vm-ip>
+
+# Navigate to app directory
+cd ~/netmaster
+
+# Pull latest changes (if using git)
+git pull
+
+# Install any new dependencies
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Restart services
+sudo systemctl restart netmaster
+sudo systemctl restart nginx
 ``` 

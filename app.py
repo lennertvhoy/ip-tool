@@ -7,7 +7,8 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+# Initialize Flask app with explicit static path configuration
+app = Flask(__name__, static_url_path='/static', static_folder='static')
 CORS(app)
 
 # In-memory storage for leaderboard (in a production environment, use a database)
@@ -35,4 +36,5 @@ def add_score():
     return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True) 
+    # For local development only
+    app.run(debug=True) 
