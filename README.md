@@ -1,110 +1,222 @@
-# Xbox Games Local Development Setup
+# NetMaster - Network Learning Platform
 
-This guide will help you set up the Xbox Games project locally on a WSL Ubuntu instance.
+An interactive educational platform for practicing binary, hexadecimal, subnetting, and VLSM concepts.
 
-## Prerequisites
+## Deploying to Azure from WSL
 
-1. Windows 10 or 11 with WSL2 installed
-2. Ubuntu 22.04 LTS or later installed via WSL
-3. Git installed on Windows
+### Prerequisites
+- Azure CLI installed on WSL
+- Git installed on WSL
+- SSH key pair generated on WSL
 
-## Step-by-Step Setup Instructions
-
-### 1. Install Required System Packages
-
-Open your WSL Ubuntu terminal and run:
-
+### 1. Install Azure CLI on WSL (if not installed)
 ```bash
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y python3 python3-pip python3-venv git
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 ```
 
-### 2. Set Up Python Virtual Environment
-
+### 2. Login to Azure
 ```bash
-# Navigate to your project directory
-cd /path/to/XboxGames
+# Login to Azure
+az login
 
-# Create a virtual environment
+# List your subscriptions
+az account list --output table
+
+# Set your subscription (if needed)
+az account set --subscription <your-subscription-id>
+```
+
+### 3. Create Resource Group and VM
+```bash
+# Set variables
+RESOURCE_GROUP="netmaster-rg"
+LOCATION="eastus"  # or your preferred region
+VM_NAME="netmaster-vm"
+ADMIN_USERNAME="azureuser"
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create VM
+az vm create \
+  --resource-group $RESOURCE_GROUP \
+  --name $VM_NAME \
+  --image Ubuntu2204 \
+  --admin-username $ADMIN_USERNAME \
+  --generate-ssh-keys \
+  --public-ip-sku Standard \
+  --size Standard_B1s
+
+# Open ports
+az vm open-port \
+  --resource-group $RESOURCE_GROUP \
+  --name $VM_NAME \
+  --port 80,443
+```
+
+### 4. Get VM's Public IP
+```bash
+VM_IP=$(az vm show \
+  --resource-group $RESOURCE_GROUP \
+  --name $VM_NAME \
+  -d \
+  --query publicIps \
+  -o tsv)
+echo $VM_IP  # Save this IP address
+```
+
+### 5. Deploy Application Files
+```bash
+# Create deployment directory
+mkdir -p ~/netmaster-deploy
+cd ~/netmaster-deploy
+
+# Copy application files
+cp -r /path/to/your/netmaster/* .
+
+# Transfer files to VM
+scp -r * $ADMIN_USERNAME@$VM_IP:~/netmaster/
+```
+
+### 6. SSH into VM and Set Up Application
+```bash
+# Connect to VM
+ssh $ADMIN_USERNAME@$VM_IP
+
+# Update system and install dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3 python3-pip python3-venv nginx
+
+# Set up application
+cd ~/netmaster
 python3 -m venv venv
-
-# Activate the virtual environment
 source venv/bin/activate
-```
-
-### 3. Install Python Dependencies
-
-```bash
-# Make sure you're in the virtual environment (you should see (venv) in your prompt)
 pip install -r requirements.txt
+pip install gunicorn
+
+# Create Gunicorn service
+sudo tee /etc/systemd/system/netmaster.service << EOF
+[Unit]
+Description=NetMaster Gunicorn Service
+After=network.target
+
+[Service]
+User=$ADMIN_USERNAME
+Group=www-data
+WorkingDirectory=/home/$ADMIN_USERNAME/netmaster
+Environment="PATH=/home/$ADMIN_USERNAME/netmaster/venv/bin"
+ExecStart=/home/$ADMIN_USERNAME/netmaster/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:app
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create Nginx configuration
+sudo tee /etc/nginx/sites-available/netmaster << EOF
+server {
+    listen 80;
+    server_name $VM_IP;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+# Enable site and configure Nginx
+sudo ln -s /etc/nginx/sites-available/netmaster /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default  # Remove default site
+sudo nginx -t
+sudo systemctl restart nginx
+
+# Start application
+sudo systemctl start netmaster
+sudo systemctl enable netmaster
 ```
 
-### 4. Set Up Environment Variables
-
-Create a `.env` file in the project root:
-
+### 7. Verify Deployment
 ```bash
-touch .env
+# Check service status
+sudo systemctl status netmaster
+sudo systemctl status nginx
+
+# Test the application
+curl http://$VM_IP
 ```
 
-Add the following content to your `.env` file:
-
-```
-FLASK_APP=app.py
-FLASK_ENV=development
-FLASK_DEBUG=1
-```
-
-### 5. Run the Application
-
-```bash
-# Make sure your virtual environment is activated
-flask run --host=0.0.0.0
-```
-
-The application will be available at `http://localhost:5000`
-
-## Development Tips
-
-1. Always activate the virtual environment before running the application:
-   ```bash
-   source venv/bin/activate
-   ```
-
-2. To deactivate the virtual environment when you're done:
-   ```bash
-   deactivate
-   ```
-
-3. If you need to install new dependencies:
-   ```bash
-   pip install package_name
-   pip freeze > requirements.txt
-   ```
+Your application should now be accessible at `http://<your-vm-ip>`.
 
 ## Troubleshooting
 
-1. If you get permission errors:
-   ```bash
-   sudo chown -R $USER:$USER .
-   ```
+### Check Logs
+```bash
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/log/nginx/access.log
 
-2. If the port 5000 is already in use:
-   ```bash
-   # Find the process using port 5000
-   sudo lsof -i :5000
-   # Kill the process
-   sudo kill -9 <PID>
-   ```
+# Application logs
+sudo journalctl -u netmaster -f
+```
 
-3. If you can't access the application from Windows:
-   - Make sure you're using `0.0.0.0` as the host
-   - Check if your Windows firewall is blocking the connection
-   - Try accessing via `http://localhost:5000` in your Windows browser
+### Common Issues
 
-## Additional Resources
+1. **Application not starting:**
+```bash
+# Check Gunicorn
+sudo systemctl status netmaster
 
-- [WSL Documentation](https://docs.microsoft.com/en-us/windows/wsl/)
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [Python Virtual Environment Documentation](https://docs.python.org/3/tutorial/venv.html) 
+# Check permissions
+sudo chown -R $ADMIN_USERNAME:www-data /home/$ADMIN_USERNAME/netmaster
+sudo chmod -R 755 /home/$ADMIN_USERNAME/netmaster
+```
+
+2. **Nginx not serving application:**
+```bash
+# Verify Nginx config
+sudo nginx -t
+
+# Check if Gunicorn is listening
+sudo netstat -tulpn | grep 8000
+```
+
+3. **Cannot connect to server:**
+```bash
+# Check firewall
+sudo ufw status
+
+# Allow HTTP traffic if needed
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+## Maintenance
+
+### Updating the Application
+```bash
+# SSH into VM
+ssh $ADMIN_USERNAME@$VM_IP
+
+# Update application files
+cd ~/netmaster
+# Update your files here
+
+# Restart services
+sudo systemctl restart netmaster
+sudo systemctl restart nginx
+```
+
+### Monitoring
+```bash
+# Check CPU/Memory usage
+htop
+
+# Check disk space
+df -h
+
+# Monitor network connections
+sudo netstat -tulpn
+``` 
