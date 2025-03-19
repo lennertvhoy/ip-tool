@@ -244,13 +244,30 @@ function generateQuestion() {
         <pre>${currentState.currentQuestion.question}</pre>
     </div>`;
 
-    document.getElementById('answer-input').value = '';
-    document.getElementById('answer-input').focus();
+    // Enable answer input and submit button
+    const answerInput = document.getElementById('answer-input');
+    const submitButton = document.getElementById('submit-answer');
+    answerInput.value = '';
+    answerInput.disabled = false;
+    submitButton.disabled = false;
+    answerInput.focus();
+
+    // Hide next question button if it exists
+    const nextButton = document.getElementById('next-question');
+    if (nextButton) {
+        nextButton.style.display = 'none';
+    }
 }
 
 function checkAnswer() {
-    const userAnswer = document.getElementById('answer-input').value.trim().toUpperCase();
+    const answerInput = document.getElementById('answer-input');
+    const submitButton = document.getElementById('submit-answer');
+    const userAnswer = answerInput.value.trim().toUpperCase();
     const correct = userAnswer === currentState.currentQuestion.answer.toUpperCase();
+
+    // Disable input and submit button after answering
+    answerInput.disabled = true;
+    submitButton.disabled = true;
 
     const questionContainer = document.getElementById('question-container');
     questionContainer.innerHTML += `<div class="result ${correct ? 'correct' : 'incorrect'}">
@@ -260,6 +277,16 @@ function checkAnswer() {
 
     updateScore(correct);
 
-    // Generate next question after a short delay
-    setTimeout(generateQuestion, 2000);
+    // Show next question button
+    let nextButton = document.getElementById('next-question');
+    if (!nextButton) {
+        nextButton = document.createElement('button');
+        nextButton.id = 'next-question';
+        nextButton.className = 'next-button';
+        nextButton.textContent = 'Next Question →';
+        nextButton.onclick = generateQuestion;
+        document.getElementById('answer-container').appendChild(nextButton);
+    } else {
+        nextButton.style.display = 'block';
+    }
 } 
