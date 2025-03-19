@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMaster - Network & Number Systems Practice</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">NetMaster</div>
+        <div class="nav-links">
+            <a href="#" class="active">Home</a>
+            <a href="#practice">Practice</a>
+            <a href="#leaderboard">Leaderboard</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Master Network Concepts & Number Systems</h1>
+            <p>Interactive exercises to improve your skills in binary, hexadecimal, subnetting, and VLSM</p>
+        </section>
+
+        <section id="practice" class="practice-section">
+            <h2>Choose Your Challenge</h2>
+            <div class="practice-grid">
+                <div class="practice-card" data-topic="binary">
+                    <h3>Binary Numbers</h3>
+                    <p>Practice binary to decimal conversion and arithmetic</p>
+                    <div class="difficulty-buttons">
+                        <button class="easy">Easy</button>
+                        <button class="medium">Medium</button>
+                        <button class="hard">Hard</button>
+                    </div>
+                </div>
+
+                <div class="practice-card" data-topic="hexadecimal">
+                    <h3>Hexadecimal</h3>
+                    <p>Master hex conversions and calculations</p>
+                    <div class="difficulty-buttons">
+                        <button class="easy">Easy</button>
+                        <button class="medium">Medium</button>
+                        <button class="hard">Hard</button>
+                    </div>
+                </div>
+
+                <div class="practice-card" data-topic="subnetting">
+                    <h3>Subnetting</h3>
+                    <p>Learn IPv4 subnetting and network design</p>
+                    <div class="difficulty-buttons">
+                        <button class="easy">Easy</button>
+                        <button class="medium">Medium</button>
+                        <button class="hard">Hard</button>
+                    </div>
+                </div>
+
+                <div class="practice-card" data-topic="vlsm">
+                    <h3>VLSM</h3>
+                    <p>Practice Variable Length Subnet Masking</p>
+                    <div class="difficulty-buttons">
+                        <button class="easy">Easy</button>
+                        <button class="medium">Medium</button>
+                        <button class="hard">Hard</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="practice-area" class="practice-area hidden">
+            <div class="practice-header">
+                <h2 id="practice-title">Practice Area</h2>
+                <div class="practice-stats">
+                    <span id="score">Score: 0</span>
+                    <span id="timer">Time: 0:00</span>
+                </div>
+            </div>
+            <div class="practice-content">
+                <div id="question-container"></div>
+                <div id="answer-container">
+                    <input type="text" id="answer-input" placeholder="Enter your answer">
+                    <button id="submit-answer">Submit</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="leaderboard" class="leaderboard-section">
+            <h2>Leaderboard</h2>
+            <div class="leaderboard-container">
+                <table id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Topic</th>
+                            <th>Difficulty</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 NetMaster. All rights reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 

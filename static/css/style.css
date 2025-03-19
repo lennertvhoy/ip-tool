@@ -1,0 +1,394 @@
+/* Global Styles */
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --background-color: #f8fafc;
+    --text-color: #1e293b;
+    --card-background: #ffffff;
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+/* Navigation */
+.navbar {
+    background-color: var(--card-background);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.nav-links a {
+    color: var(--text-color);
+    text-decoration: none;
+    margin-left: 2rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: var(--primary-color);
+}
+
+/* Container and Sections */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.hero {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Practice Section */
+.practice-section {
+    padding: 2rem 0;
+}
+
+.practice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.practice-card {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.practice-card:hover {
+    transform: translateY(-5px);
+}
+
+.practice-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.difficulty-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.difficulty-buttons button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.difficulty-buttons .easy {
+    background-color: #86efac;
+}
+
+.difficulty-buttons .medium {
+    background-color: #fde047;
+}
+
+.difficulty-buttons .hard {
+    background-color: #fca5a5;
+}
+
+/* Practice Area */
+.practice-area {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.practice-area.hidden {
+    display: none;
+}
+
+.practice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.practice-stats {
+    display: flex;
+    gap: 2rem;
+    font-weight: 500;
+}
+
+.practice-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#answer-container {
+    display: flex;
+    gap: 1rem;
+}
+
+#answer-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+#submit-answer {
+    padding: 0.5rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+#submit-answer:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Leaderboard Section */
+.leaderboard-section {
+    margin-top: 3rem;
+}
+
+.leaderboard-container {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#leaderboard-table th,
+#leaderboard-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#leaderboard-table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 2rem;
+    margin-top: 3rem;
+    background-color: var(--card-background);
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .nav-links a {
+        margin-left: 0;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .practice-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .practice-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* Question Styles */
+.question {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.question pre {
+    background-color: #f1f5f9;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    margin-top: 1rem;
+}
+
+/* Result Styles */
+.result {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+.result.correct {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.result.incorrect {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.explanation {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: normal;
+}
+
+/* Additional Button Styles */
+button {
+    transition: transform 0.1s ease;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.difficulty-buttons button:hover {
+    filter: brightness(0.9);
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.question, .result {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Practice Area Improvements */
+#question-container {
+    min-height: 200px;
+}
+
+#answer-input {
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+/* Leaderboard Improvements */
+#leaderboard-table tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+#leaderboard-table tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Accessibility Improvements */
+button, input {
+    outline: none;
+}
+
+button:focus, input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #0f172a;
+        --text-color: #e2e8f0;
+        --card-background: #1e293b;
+    }
+
+    .question pre {
+        background-color: #334155;
+    }
+
+    #leaderboard-table tr:nth-child(even) {
+        background-color: #1e293b;
+    }
+
+    #leaderboard-table tr:hover {
+        background-color: #334155;
+    }
+
+    .result.correct {
+        background-color: #064e3b;
+        color: #a7f3d0;
+    }
+
+    .result.incorrect {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+} 
